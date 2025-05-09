@@ -1,18 +1,38 @@
-class Planet:
-    def __init__(self, id, name, description, distance_from_sun):
-        self.id = id
-        self.name = name
-        self.description = description
-        self.distance_from_sun = distance_from_sun
 
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+from ..db import db
+from sqlalchemy import String, Float, Integer
 
-planets = [
-    Planet(1, "Mercury", "The smallest and closest planet to the Sun.", 57.9),
-    Planet(2, "Venus", "Similar in size to Earth, but with a toxic atmosphere.", 108.2),
-    Planet(3, "Earth", "Our home planet, the only known one with life.", 149.6),
-    Planet(4, "Mars", "The Red Planet, known for its dusty, rocky surface.", 227.9),
-    Planet(5, "Jupiter", "The largest planet, a gas giant with a Great Red Spot.", 778.5),
-    Planet(6, "Saturn", "Famous for its beautiful ring system.", 1_433.5),
-    Planet(7, "Uranus", "An ice giant with a tilted axis.", 2_872.5),
-    Planet(8, "Neptune", "A distant blue planet known for its strong winds.", 4_495.1)
-]
+class Planet(db.Model):
+    __tablename__ = "planets"
+    id: Mapped[int]              = mapped_column(Integer, primary_key=True, autoincrement=True)
+    name: Mapped[str]            = mapped_column(String, nullable=False)
+    description: Mapped[str]     = mapped_column(String, nullable=True)
+    distance_from_sun: Mapped[float] = mapped_column(Float, nullable=True)
+
+    moons: Mapped[list["Moon"]] = relationship(
+        "Moon",
+        back_populates="planet",
+        cascade="all, delete-orphan"
+    )
+
+    def to_dict(self) -> dict:
+        planet_as_dict = {}
+        planet_as_dict["id"] = self.id
+        planet_as_dict["name"] = self.name
+        planet_as_dict["description"] = self.description
+        planet_as_dict["distance_from_sun"] = self.distance_from_sun
+        planet_as_dict["moons"] = [m.to_dict() for m in self.moons]
+
+        return planet_as_dict
+
+    @classmethod
+    def from_dict(cls, planet_data: dict) -> "Planet":
+        name               = planet_data["name"]
+        description        = planet_data["description"]
+        distance_from_sun  = planet_data["distance_from_sun"]
+        return cls(
+            name=name,
+            description=description,
+            distance_from_sun=distance_from_sun
+        )
